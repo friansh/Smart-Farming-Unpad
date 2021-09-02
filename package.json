@@ -1,0 +1,32 @@
+{
+  "name": "belajar-jwt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon .",
+    "start": "node ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.0.0",
+    "body-parser": "^1.19.0",
+    "cors": "^2.8.5",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-jwt": "^6.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "mongoose": "^5.11.14",
+    "mqtt": "^4.2.6",
+    "multer": "^1.4.3",
+    "redis": "^3.1.2",
+    "socket.io": "^4.0.1",
+    "socket.io-redis": "^6.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^7.20.0",
+    "eslint-plugin-react": "^7.22.0"
+  }
+}
