@@ -1,7 +1,6 @@
 console.log("[INFO] Program started...");
 
 require("dotenv").config();
-require("./context/mqtt");
 
 const express = require("express");
 const bodyParser = require("body-parser");
