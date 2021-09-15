@@ -6,6 +6,9 @@ const jwt = express_jwt({
   secret: process.env.JWT_SECRET,
   algorithms: ["HS256"],
 });
+const { body, validationResult } = require("express-validator");
+
+const generateRandomString = require("../context/random");
 
 const Device = require("../model/Device");
 const Heartbeat = require("../model/Heartbeat");
@@ -79,6 +82,51 @@ router.get("/", jwt, async (req, res) => {
   );
 });
 
+router.post("/", jwt, body("name").isLength({ min: 5 }), async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  let searchToken = [0];
+  let newToken;
+
+  // Assure there is no duplicate device token
+  while (searchToken.length != 0) {
+    newToken = generateRandomString(32);
+
+    searchToken = await Device.find({ token: newToken })
+      .exec()
+      .catch(() => console.log("Err1"));
+  }
+
+  const newDevice = new Device({
+    user_id: req.user.user_id,
+    name: req.body.name,
+    description: req.body.description,
+    token: newToken,
+  });
+
+  newDevice.save((err, doc) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({
+        message: "Server error, failed to save the new device.",
+      });
+    }
+
+    res.json({
+      message: "The new device has been successfully saved.",
+      saved_device: {
+        name: doc.name,
+        description: doc.description,
+        token: doc.token,
+        createdAt: doc.createdAt,
+      },
+    });
+  });
+});
+
 router.get("/heartbeat", jwt, async (req, res) => {
   Device.find({ user_id: req.user.user_id }, (err, docs) => {
     if (err) {
@@ -123,6 +171,27 @@ router.get("/:device_id", jwt, async (req, res) => {
       });
     }
   );
+});
+
+router.delete("/:device_id", jwt, async (req, res) => {
+  const device = await Device.findOne({ _id: req.params.device_id })
+    .exec()
+    .catch(() => res.status(422).json({ message: "Invalid device id." }));
+
+  if (!device) {
+    res.status(404).json({ message: "Device not found." });
+    return;
+  }
+
+  Device.deleteOne(device, (err) => {
+    if (err) {
+      return res
+        .status(500)
+        .json({ message: "Server error, failed to delete the device." });
+    }
+
+    return res.json({ message: "The device has been successfully deleted." });
+  });
 });
 
 module.exports = router;
