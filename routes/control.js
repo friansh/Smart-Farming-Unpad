@@ -11,8 +11,10 @@ const { body, validationResult } = require("express-validator");
 
 const ControlIndex = require("../model/ControlIndex");
 const ControlQueue = require("../model/ControlQueue");
+const ControlHistory = require("../model/ControlHistory");
 const Control = require("../model/Control");
 const Device = require("../model/Device");
+const { json } = require("body-parser");
 
 router.get("/", jwt, async (req, res) => {
   ControlIndex.find({ user_id: req.user.user_id }, (err, docs) => {
@@ -82,6 +84,32 @@ router.get("/queue", jwt, async (req, res) => {
   });
 });
 
+router.get("/history/:control_id", jwt, async (req, res) => {
+  ControlHistory.find(
+    { control_id: req.params.control_id },
+    {},
+    {
+      sort: {
+        createdAt: -1,
+      },
+    },
+    (err, docs) => {
+      if (err)
+        return json.status(500).json({
+          message: "Server error while gathering the control history.",
+        });
+
+      const controlHistories = docs.map((ch) => {
+        return {
+          createdAt: ch.createdAt,
+          value: ch.value,
+        };
+      });
+      res.json(controlHistories);
+    }
+  );
+});
+
 router.get("/:control_id", jwt, async (req, res) => {
   const devices = await Device.find({ user_id: req.user.user_id }).exec();
 
@@ -123,6 +151,11 @@ router.post("/:control_id", jwt, body("value").notEmpty(), async (req, res) => {
       return res.status(500).json({
         message: "Server error, failed to save the new control queue.",
       });
+
+    new ControlHistory({
+      control_id: doc.control_id,
+      value: doc.value,
+    }).save();
 
     return res.json({ message: "The control queue has been saved." });
   });
