@@ -11,11 +11,12 @@ const mw_jwt = express_jwt({
 
 const bcrypt = require("bcrypt");
 
+const DeveloperAccount = require("../model/DeveloperAccount");
 const User = require("../model/User");
 
 const random = require("../context/random");
 
-router.get("/user", mw_jwt, async (req, res) => {
+router.get("/", mw_jwt, async (req, res) => {
   const user = await User.findById(req.user.user_id);
 
   res.status(200).send({
@@ -25,7 +26,7 @@ router.get("/user", mw_jwt, async (req, res) => {
   });
 });
 
-router.post("/user/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   const loggingInUser = await User.findOne({ email: req.body.email });
 
   if (!loggingInUser) {
@@ -54,7 +55,7 @@ router.post("/user/login", async (req, res) => {
   } else res.status(401).send({ message: "Invalid email or password." });
 });
 
-router.patch("/user", mw_jwt, async (req, res) => {
+router.patch("/", mw_jwt, async (req, res) => {
   const updatingUser = await User.findOne({ _id: req.user.user_id });
 
   if (req.body.email != updatingUser.email) {
@@ -89,7 +90,7 @@ router.patch("/user", mw_jwt, async (req, res) => {
     .send({ message: "The user profile has been successfully updated." });
 });
 
-router.patch("/user/password", mw_jwt, async (req, res) => {
+router.patch("/password", mw_jwt, async (req, res) => {
   if (req.body.new_password !== req.body.new_password_confirm) {
     res.status(422).send({
       message: "The password and the confirmation field mismatch.",
@@ -131,7 +132,7 @@ router.patch("/user/password", mw_jwt, async (req, res) => {
   });
 });
 
-router.put("/user", async (req, res) => {
+router.post("/", async (req, res) => {
   const userFound = await User.findOne({ email: req.body.email }).catch(
     (error) => {
       console.log(error);
@@ -163,6 +164,79 @@ router.put("/user", async (req, res) => {
   });
 
   res.status(200).send({ message: "Your account have been registered." });
+});
+
+router.post("/developer/activate", mw_jwt, async (req, res) => {
+  if (!req.body.activation_code == process.env.DEV_ACCOUNT_ACTIVATION_CODE)
+    return res.status(403).json({ message: "Invalid activation code" });
+
+  const account = await DeveloperAccount.findOne({
+    user_id: req.user.user_id,
+  }).exec();
+
+  if (!account) {
+    new DeveloperAccount({
+      user_id: req.user.user_id,
+      token: random(128),
+    }).save((err, doc) => {
+      if (err)
+        return res
+          .status(500)
+          .json({ message: "Failed to activate your developer account." });
+
+      return res.json({
+        message: "Your developer account has been activated.",
+        token: doc.token,
+      });
+    });
+  } else {
+    DeveloperAccount.findByIdAndUpdate(
+      account._id,
+      {
+        token: random(128),
+      },
+      {
+        new: true,
+      },
+      (err, doc) => {
+        if (err) {
+          console.log(err);
+          return res
+            .status(500)
+            .json({ message: "Failed to re-randomize your token." });
+        }
+
+        return res.json({
+          token: doc.token,
+        });
+      }
+    );
+  }
+});
+
+router.get("/developer/token", mw_jwt, (req, res) => {
+  DeveloperAccount.findOne(
+    {
+      user_id: req.user.user_id,
+    },
+    (err, doc) => {
+      if (err) {
+        console.log(err);
+        return res
+          .status(500)
+          .json({ message: "Failed to get your developer accounts token." });
+      }
+
+      if (!doc)
+        return res
+          .status(404)
+          .send({ message: "You dont have a developer accounts token." });
+
+      return res.json({
+        token: doc.token,
+      });
+    }
+  );
 });
 
 module.exports = router;
