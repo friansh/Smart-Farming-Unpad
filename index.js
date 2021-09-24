@@ -54,13 +54,15 @@ const deviceRoutes = require("./routes/device");
 const datasetRoute = require("./routes/dataset");
 const imagelistRoute = require("./routes/imagelist");
 const controlRoute = require("./routes/control");
+const developerRoute = require("./routes/developer");
 
-app.use("/", userRoutes);
+app.use("/user", userRoutes);
 app.use("/firmware", firmwareRoutes);
 app.use("/device", deviceRoutes);
 app.use("/dataset", datasetRoute);
 app.use("/imagelist", imagelistRoute);
 app.use("/control", controlRoute);
+app.use("/developer", developerRoute);
 
 app.use((req, res, next) => {
   res.status(404).send({ message: "Cannot find the specified resource." });
