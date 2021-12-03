@@ -19,65 +19,68 @@ router.get("/", jwt, async (req, res) => {
     { user_id: req.user.user_id },
     {},
     { sort: { name: -1 } },
-    async (err, docs) => {
+    (err, devices) => {
       if (err) {
         res.status(500).send("Server error. ERRCODE: 2000FDV1");
+        console.log(err);
         return;
       }
 
-      const deviceList = docs.map((val) => {
+      const deviceList = devices.map((val) => {
         return {
           device_id: val._id,
         };
       });
 
-      let heartbeat = await Heartbeat.find({ $or: deviceList })
-        .exec()
-        .catch(() => {
+      Heartbeat.find({ $or: deviceList }, (err, heartbeats) => {
+        if (err) {
           res.status(500).send("Server error. ERRCODE: 2000FHB1");
           return;
+        }
+
+        heartbeat = heartbeats.map((val) => {
+          return {
+            device_id: val.device_id,
+            firmware_version: val.firmware_version,
+            last_heartbeat: val.updatedAt,
+          };
         });
 
-      heartbeat = heartbeat.map((val) => {
-        return {
-          device_id: val.device_id,
-          firmware_version: val.firmware_version,
-          last_heartbeat: val.updatedAt,
-        };
+        // const lastData = await Dataset.aggregate([
+        //   {
+        //     $group: {
+        //       _id: "$_id",
+        //       last_update: { $max: "$createdAt" },
+        //     },
+        //   },
+        // ])
+        //   .exec()
+        //   .catch(() => {
+        //     res.status(500).send("Server error. ERRCODE: 2000FDT1");
+        //   });
+
+        let devicesMapped = devices.map((val) => {
+          const findHeartbeat = heartbeat.find((hb) => {
+            if (hb.device_id == val._id) return true;
+            return false;
+          });
+
+          return {
+            id: val._id,
+            name: val.name,
+            description: val.description,
+            last_heartbeat: !findHeartbeat
+              ? null
+              : findHeartbeat.last_heartbeat,
+            firmware_version: !findHeartbeat
+              ? null
+              : findHeartbeat.firmware_version,
+            // last_update: lastData.last_update,
+          };
+        });
+
+        res.json(devicesMapped);
       });
-
-      const lastData = await Dataset.aggregate([
-        {
-          $group: {
-            _id: "$_id",
-            last_update: { $max: "$createdAt" },
-          },
-        },
-      ])
-        .exec()
-        .catch(() => {
-          res.status(500).send("Server error. ERRCODE: 2000FDT1");
-        });
-
-      let devices = docs.map((val) => {
-        const findHeartbeat = heartbeat.find((hb) => {
-          if (hb.device_id == val._id) return true;
-          return false;
-        });
-
-        return {
-          id: val._id,
-          name: val.name,
-          description: val.description,
-          last_heartbeat: !findHeartbeat ? null : findHeartbeat.last_heartbeat,
-          firmware_version: !findHeartbeat
-            ? null
-            : findHeartbeat.firmware_version,
-          // last_update: lastData.last_update,
-        };
-      });
-
-      res.json(devices);
     }
   );
 });
