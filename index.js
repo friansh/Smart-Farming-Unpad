@@ -24,7 +24,8 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 mongoose.connect(
-  `mongodb://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_AUTH}`,
+  `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@smartfarmingunpad.usves.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`,
+  // `mongodb://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_AUTH}`,
   {
     useNewUrlParser: true,
     useUnifiedTopology: true,
